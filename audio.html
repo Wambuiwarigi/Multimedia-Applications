@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Audio Player For Multimedia Applications Assignment</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f3;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #1a1a1a;
+    }
+
+    .player {
+      background: #ffffff;
+      border: 0.5px solid rgba(0,0,0,0.12);
+      border-radius: 14px;
+      padding: 1.75rem 1.5rem;
+      width: 100%;
+      max-width: 420px;
+      margin: 1rem;
+    }
+
+    .track-info { margin-bottom: 1.5rem; }
+    .track-title { font-size: 15px; font-weight: 500; color: #1a1a1a; margin-bottom: 3px; }
+    .track-sub   { font-size: 12px; color: #999; }
+
+    .progress-wrap { margin-bottom: 1rem; cursor: pointer; padding: 6px 0; }
+    .progress-bg {
+      height: 3px;
+      background: #e5e5e5;
+      border-radius: 2px;
+      position: relative;
+    }
+    .progress-fill {
+      height: 3px;
+      background: #1a1a1a;
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.1s linear;
+    }
+    .progress-thumb {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: #1a1a1a;
+      position: absolute;
+      top: 50%; left: 0%;
+      transform: translate(-50%, -50%);
+      transition: left 0.1s linear;
+      opacity: 0;
+    }
+    .progress-wrap:hover .progress-thumb { opacity: 1; }
+
+    .time-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 7px;
+    }
+    .time-label {
+      font-size: 11px;
+      color: #aaa;
+      font-family: 'SF Mono', 'Consolas', monospace;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .ctrl-group { display: flex; align-items: center; gap: 6px; }
+
+    .icon-btn {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      border: 0.5px solid rgba(0,0,0,0.15);
+      background: transparent;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: #1a1a1a;
+      transition: background 0.15s;
+    }
+    .icon-btn:hover   { background: #f0f0ee; }
+    .icon-btn:active  { transform: scale(0.96); }
+
+    .icon-btn.primary {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: #1a1a1a;
+      border: none;
+      color: #ffffff;
+    }
+    .icon-btn.primary:hover { background: #333; }
+
+    .vol-wrap { display: flex; align-items: center; gap: 8px; }
+    .vol-slider {
+      width: 72px;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 3px;
+      border-radius: 2px;
+      background: #e5e5e5;
+      outline: none;
+      cursor: pointer;
+    }
+    .vol-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: #1a1a1a;
+      cursor: pointer;
+    }
+    .vol-slider::-moz-range-thumb {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: #1a1a1a;
+      cursor: pointer;
+      border: none;
+    }
+
+    .upload-row {
+      margin-top: 1.25rem;
+      padding-top: 1.25rem;
+      border-top: 0.5px solid rgba(0,0,0,0.1);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .upload-btn {
+      font-size: 12px;
+      padding: 5px 12px;
+      border-radius: 8px;
+      border: 0.5px solid rgba(0,0,0,0.15);
+      background: transparent;
+      color: #555;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .upload-btn:hover { background: #f0f0ee; }
+    .upload-label {
+      font-size: 12px;
+      color: #aaa;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="player">
+    <div class="track-info">
+      <div class="track-title" id="track-title">No file loaded</div>
+      <div class="track-sub"   id="track-sub">Upload an audio file below to begin</div>
+    </div>
+
+    <div class="progress-wrap" id="prog-wrap">
+      <div class="progress-bg">
+        <div class="progress-fill" id="prog-fill"></div>
+        <div class="progress-thumb" id="prog-thumb"></div>
+      </div>
+      <div class="time-row">
+        <span class="time-label" id="t-current">0:00</span>
+        <span class="time-label" id="t-total">0:00</span>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="ctrl-group">
+        
+        <button class="icon-btn" title="Rewind 10s" onclick="seek(-10)">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M4 8 L10 4 L10 12 Z" fill="currentColor"/>
+            <path d="M3 4 L3 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+
+        
+        <button class="icon-btn primary" id="btn-play" title="Play / Pause" onclick="togglePlay()">
+          <svg id="icon-play" width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M5 3.5 L13 8 L5 12.5 Z" fill="currentColor"/>
+          </svg>
+          <svg id="icon-pause" width="16" height="16" viewBox="0 0 16 16" fill="none" style="display:none">
+            <rect x="4" y="3" width="3" height="10" rx="1" fill="currentColor"/>
+            <rect x="9" y="3" width="3" height="10" rx="1" fill="currentColor"/>
+          </svg>
+        </button>
+
+        
+        <button class="icon-btn" title="Forward 10s" onclick="seek(10)">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M12 8 L6 4 L6 12 Z" fill="currentColor"/>
+            <path d="M13 4 L13 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="vol-wrap">
+        
+        <button class="icon-btn" id="btn-mute" title="Mute / Unmute" onclick="toggleMute()">
+          <svg id="icon-vol" width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M3 6h2l3-3v10L5 10H3a1 1 0 01-1-1V7a1 1 0 011-1z" fill="currentColor"/>
+            <path d="M11 5.5c1 .8 1.5 1.6 1.5 2.5s-.5 1.7-1.5 2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            <path d="M12.5 3.5c1.5 1.2 2.5 2.7 2.5 4.5s-1 3.3-2.5 4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          <svg id="icon-mute" width="16" height="16" viewBox="0 0 16 16" fill="none" style="display:none">
+            <path d="M3 6h2l3-3v10L5 10H3a1 1 0 01-1-1V7a1 1 0 011-1z" fill="currentColor"/>
+            <path d="M11 6l3 4M14 6l-3 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+        </button>
+
+        
+        <input class="vol-slider" type="range" min="0" max="1" step="0.01" value="1"
+               id="vol-slider" oninput="setVolume(this.value)" />
+      </div>
+    </div>
+
+    <div class="upload-row">
+      <button class="upload-btn" onclick="document.getElementById('file-in').click()">
+        Choose file
+      </button>
+      <span class="upload-label" id="file-label">mp3, wav, ogg, flac…</span>
+      <input type="file" id="file-in" accept="audio/*" style="display:none"
+             onchange="loadFile(this)" />
+    </div>
+  </div>
+
+  <script>
+    const audio = new Audio();
+    let muted = false;
+
+  
+    function fmt(s) {
+      s = Math.floor(s || 0);
+      const m = Math.floor(s / 60), sec = s % 60;
+      return m + ':' + String(sec).padStart(2, '0');
+    }
+
+    
+    function loadFile(inp) {
+      const f = inp.files[0];
+      if (!f) return;
+      audio.src = URL.createObjectURL(f);
+      audio.load();
+      document.getElementById('track-title').textContent = f.name.replace(/\.[^.]+$/, '');
+      document.getElementById('track-sub').textContent   = f.type || 'audio file';
+      document.getElementById('file-label').textContent  = f.name;
+    }
+
+    
+    function togglePlay() {
+      if (!audio.src) return;
+      audio.paused ? audio.play() : audio.pause();
+    }
+
+    function seek(delta) {
+      if (!audio.src) return;
+      audio.currentTime = Math.max(0, Math.min(audio.duration || 0, audio.currentTime + delta));
+    }
+
+    
+    function toggleMute() {
+      muted = !muted;
+      audio.muted = muted;
+      document.getElementById('icon-vol').style.display  = muted ? 'none' : '';
+      document.getElementById('icon-mute').style.display = muted ? ''     : 'none';
+    }
+
+    function setVolume(v) {
+      audio.volume = v;
+      if (parseFloat(v) > 0 && muted) {
+        muted = false;
+        audio.muted = false;
+        document.getElementById('icon-vol').style.display  = '';
+        document.getElementById('icon-mute').style.display = 'none';
+      }
+    }
+
+    
+    audio.addEventListener('play', () => {
+      document.getElementById('icon-play').style.display  = 'none';
+      document.getElementById('icon-pause').style.display = '';
+    });
+    audio.addEventListener('pause', () => {
+      document.getElementById('icon-play').style.display  = '';
+      document.getElementById('icon-pause').style.display = 'none';
+    });
+    audio.addEventListener('ended', () => {
+      document.getElementById('icon-play').style.display  = '';
+      document.getElementById('icon-pause').style.display = 'none';
+    });
+    audio.addEventListener('timeupdate', () => {
+      const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
+      document.getElementById('prog-fill').style.width  = pct.toFixed(2) + '%';
+      document.getElementById('prog-thumb').style.left  = pct.toFixed(2) + '%';
+      document.getElementById('t-current').textContent  = fmt(audio.currentTime);
+    });
+    audio.addEventListener('durationchange', () => {
+      document.getElementById('t-total').textContent = fmt(audio.duration);
+    });
+
+    
+    document.getElementById('prog-wrap').addEventListener('click', function (e) {
+      if (!audio.duration) return;
+      const rect  = this.getBoundingClientRect();
+      const ratio = (e.clientX - rect.left) / rect.width;
+      audio.currentTime = ratio * audio.duration;
+    });
+  </script>
+</body>
+</html>
